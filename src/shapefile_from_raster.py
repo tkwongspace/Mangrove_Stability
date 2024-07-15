@@ -18,7 +18,7 @@ try:
     with rasterio.open(path_to_tif) as f:
         # display current resolution
         current_resolution = f.res
-        print(f"-- Current resolution: {current_resolution} meters.")
+        print(f"-- Current resolution: {current_resolution[0]} meters.")
         # ask if perform resampling
         resample = input("   Resample the raster? (yes/no): ").strip().lower()
 
@@ -28,10 +28,8 @@ try:
 
             # calculate new transform and dimensions
             transform, width, height = calculate_default_transform(
-                f.crs, f.crs, f.width, f.height,
-                resolution=(target_resolution, target_resolution),
-                dst_width=f.width * f.res[0] / target_resolution,
-                dst_height=f.height * f.res[1] / target_resolution
+                f.crs, f.crs, f.width, f.height, f.transform,
+                resolution=(target_resolution, target_resolution)
             )
             profile = f.profile
             profile.update(transform=transform, width=width, height=height)
@@ -56,7 +54,7 @@ try:
 
         else:
             # no resampling, use the original data
-            image = f.read(1)
+            data = f.read(1)
             transform = f.transform
             profile = f.profile
             print(">> Original raster loaded.")
@@ -64,7 +62,7 @@ try:
         crs = f.crs
 
     # extract the forest class
-    mask = image == 2
+    mask = data == 2
 
     # convert the mask to polygons
     print(">> Reading shapes of pixels in target class...")
