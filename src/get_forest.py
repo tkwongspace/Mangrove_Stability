@@ -62,18 +62,18 @@ path_for_export = input("-- Path to the export file (Remember with .shp): ")
 divert = 0
 while divert == 0:
     print("-- Please select the following pre-defined types of your input raster:")
-    choice = input(
-        '[A] CLCD images (albert, 30m), [B] Global Plantation Products (WGS84, 0.0003deg), [C] Others.').strip().upper()
+    print("   [A] CLCD images (albert, 30m), [B] Global Plantation Products (WGS84, 0.0003deg), [C] Others.")
+    choice = input('   A/B/C: ').strip().upper()
     if choice == "A":
-        print("  CLCD product selected.")
+        print(">> CLCD product selected.")
         tif_type = "CLCD"
         divert = 1
     elif choice == "B":
-        print("  Global Plantation product selected.")
+        print(">> Global Plantation product selected.")
         tif_type = "GP"
         divert = 1
     elif choice == "C":
-        print("  Not pre-defined product. Please set up the criteria for shapefile creation.")
+        print(">> Not pre-defined product. Please set up the criteria for shapefile creation later.")
         tif_type = "others"
         divert = 1
     else:
@@ -98,6 +98,7 @@ try:
         resample = input("   Resample the raster? (yes/no): ").strip().lower()
 
         if resample == 'yes':
+            print(">> Getting ready for resampling...")
             # ask for the target resolution
             target_resolution = float(input("-- Target resolution (in meters): ").strip())
             if tif_type == 'CLCD':
@@ -120,6 +121,7 @@ try:
             # create a new array for the resampled data
             resampled_data = np.empty((new_height, new_width), dtype=src.dtypes[0])
 
+            print(">> Resampling the raster...")
             # resample data to the target resolution
             reproject(
                 source=data,
