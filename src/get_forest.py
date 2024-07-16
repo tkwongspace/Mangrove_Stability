@@ -11,12 +11,13 @@ from shapely.geometry import shape, mapping
 from tqdm import tqdm
 
 
-def degrees_to_meters(latitude, longitude_resolution, latitude_resolution):
+def degrees_to_meters(latitude, longitude, latitude_resolution, longitude_resolution):
     """
-    Converts resolution from degrees to meters at the given latitude.
+    Converts resolution from degrees to meters at the given latitude and longitude.
     :param latitude:
-    :param longitude_resolution:
+    :param longitude:
     :param latitude_resolution:
+    :param longitude_resolution:
     :return:
     """
     from pyproj import CRS
@@ -25,15 +26,15 @@ def degrees_to_meters(latitude, longitude_resolution, latitude_resolution):
     # define WGS84 coordinate system
     wgs84 = CRS.from_epsg(4326)
     # define a local UTM zone coordinate system
-    utm_zone = int((latitude + 183) / 6)
+    utm_zone = int((longitude + 180) / 6) + 1
     utm = CRS.from_proj4(f"+proj=utm +zone={utm_zone} +datum=WGS84")
 
     transformer = Transformer.from_crs(wgs84, utm, always_xy=True)
 
     # convert latitude and longitude resolution to meters
-    lon1, lat1 = transformer.transform(0, latitude)
-    lon2, lat2 = transformer.transform(longitude_resolution, latitude)
-    lon3, lat3 = transformer.transform(0, longitude_resolution + latitude)
+    lon1, lat1 = transformer.transform(longitude, latitude)
+    lon2, _ = transformer.transform(longitude + longitude_resolution, latitude)
+    _, lat3 = transformer.transform(longitude, latitude_resolution + latitude)
 
     longitude_res_in_meter = sqrt((lon2 - lon1) ** 2)
     latitude_res_in_meter = sqrt((lat3 - lat1) ** 2)
@@ -82,6 +83,7 @@ while divert == 0:
 try:
     # load the raster data
     with rasterio.open(path_to_tif) as src:
+        print(">> Reading raster...")
         # read the first band only
         data = src.read(1)
 
@@ -92,7 +94,8 @@ try:
         else:
             lon_res, lat_res = src.res
             center_lat = (src.bounds.top + src.bounds.bottom) / 2
-            lon_res_m, lat_res_m = degrees_to_meters(center_lat, lon_res, lat_res)
+            center_lon = (src.bounds.left + src.bounds.right) / 2
+            lon_res_m, lat_res_m = degrees_to_meters(center_lat, center_lon, lat_res, lon_res)
             print(f"-- Current resolution: {lon_res_m:.2f} meters x {lat_res_m:.2f} meters.")
         # ask if perform resampling
         resample = input("   Resample the raster? (yes/no): ").strip().lower()
