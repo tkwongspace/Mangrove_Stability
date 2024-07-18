@@ -4,7 +4,7 @@ import numpy as np
 from rasterio.enums import Resampling
 from rasterio.warp import reproject
 from rasterio.features import shapes
-from shapely.geometry import shape, mapping
+from shapely.geometry import shape, mapping, Polygon
 from pyproj import CRS, Transformer
 from math import sqrt
 from tqdm import tqdm
@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 def create_shapefile(src, data, data_type, longitude_in_meter,
                      latitude_in_meter, transform, target_resolution,
-                     path_to_export, prefix_to_export, file_name):
+                     path_to_export, prefix_to_export, roi, file_name):
     data_array, new_transform = resample_data(
         src=src,
         data=data,
@@ -50,18 +50,32 @@ def create_shapefile(src, data, data_type, longitude_in_meter,
         print(f"-! There is no plantation polygon detected in {file_name}.")
         return
     else:
-        pbar = tqdm(total=total_polygons, desc="Converting polygons")
+        # pbar = tqdm(total=total_polygons, desc="Converting polygons")
         # write the polygons to a shapefile
         if prefix_to_export is not None:
             path_to_export = f"{path_to_export}/{prefix_to_export}_{file_name}.shp"
-        with fiona.open(path_to_export, 'w', driver='ESRI Shapefile', crs=src.crs, schema=schema) as out:
+            with fiona.open(path_to_export, 'w', driver='ESRI Shapefile', crs=src.crs, schema=schema) as out:
+                feature_count = 0
+                for elem in results:
+                    poly = shape(elem['geometry'])
+                    if isinstance(poly, Polygon) and poly.intersects(roi):
+                        feature_count += 1
+                        intersection = poly.intersection(roi)
+                        if not intersection.is_empty:
+                            out.write({
+                                'geometry': mapping(intersection),
+                                'properties': {'raster_val': elem['properties']['raster_val']}
+                            })
+        else:
             for elem in results:
-                out.write({
-                    'geometry': mapping(shape(elem['geometry'])),
-                    'properties': {'raster_val': elem['properties']['raster_val']}
-                })
-                pbar.update(1)
-        pbar.close()  # close progress bar when done
+                with fiona.open(path_to_export, 'w', driver='ESRI Shapefile', crs=src.crs, schema=schema) as out:
+                    out.write({
+                        'geometry': mapping(shape(elem['geometry'])),
+                        'properties': {'raster_val': elem['properties']['raster_val']}
+                    })
+                # pbar.update(1)
+        # pbar.close()  # close progress bar when done
+        print(f">> Finish processing forest polygons in {file_name}, with {feature_count} polygons in total.")
 
 
 def degrees_to_meters(latitude, longitude, latitude_resolution, longitude_resolution):
@@ -121,6 +135,8 @@ def get_resample_info(src, raster_type):
     lon_m, lat_m = get_resolution(src, raster_type)
     print(f"-- Current resolution: {lon_m:.2f} meters x {lat_m:.2f} meters.")
     # ask if perform resampling
+    print("!! NOTICE: This software is unstable in resampling raster. We are still working on it and please use it "
+          "with caution.")
     resample = input("   Resample the raster? (yes/no): ").strip().lower()
     if resample == 'yes':
         print(">> Setting up the profile for resampling...")
@@ -260,7 +276,7 @@ def resample_data(src, data, lon_m, lat_m, transform, crs, target_resolution=Non
                 src_crs=crs,
                 dst_transform=new_transform,
                 dst_crs=crs,
-                resampling=Resampling.mode
+                resampling=Resampling.max  # valid if contains any pixel of plantation
             )
             data = resampled_data
             print(">> Resample finished.")
