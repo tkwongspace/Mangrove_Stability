@@ -2,6 +2,18 @@ import os
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
+from tqdm import tqdm
+
+
+def get_satellite_info():
+    ask = input("-- Landsat / MODIS? (L/M): ").strip().upper()
+    if ask == "L":
+        return "Landsat"
+    elif ask == "M":
+        return "MODIS"
+    else:
+        get_satellite_info()
+
 
 # load the table of points
 # points_table = pd.read_csv(r"../data/vi_gee/Landsat/Mean_ndvi_1.csv")
@@ -9,6 +21,8 @@ from shapely.geometry import Point
 path_to_table = input("-- Please input the folder of point tables: ")
 csv_candidates = [f for f in os.listdir(path_to_table) if f.endswith('.csv') and not f.startswith("._")]
 print(f">> {len(csv_candidates)} CSV files found.")
+
+satellite = get_satellite_info()
 
 export_csv_name = input("-- Please input the full path of the exported CSV file (ends with .csv): ")
 
@@ -20,9 +34,11 @@ protected_area = gpd.read_file(r"../data/pa.shp")
 unprotected_area = gpd.read_file(r"../data/npa.shp")
 
 # process each csv file
+pbar = tqdm(total=len(csv_candidates), desc="Arranging tables")
 for csv in csv_candidates:
     # load the table of points
     points_table = pd.read_csv(os.path.join(path_to_table, csv))
+
     # create a geo-dataframe from the points dataframe
     geometry = [Point(xy) for xy in zip(points_table['lon'], points_table['lat'])]
     points_gdf = gpd.GeoDataFrame(points_table, geometry=geometry, crs="EPSG:4326")
@@ -51,15 +67,26 @@ for csv in csv_candidates:
     # create new columns for point ID and date
     # split point ID and capture date from system:index
     split_column = points_gdf['system:index'].str.split('_', expand=True)
-    points_gdf['pointID'] = split_column[0]
-    points_gdf['date'] = pd.to_datetime(split_column[3], format='%Y%m%d')
-    points_gdf['filename'] = csv
+    if satellite == "Landsat":
+        # Landsat system:index format -> {Point ID}_{Product Abbr.}_{TIle ID}_{Acquired Date}
+        points_gdf['pointID'] = split_column[0]
+        points_gdf['date'] = pd.to_datetime(split_column[3], format='%Y%m%d')
+        points_gdf['filename'] = csv.split(".")[0]
+    else:
+        # MODIS system:index format -> {Point ID}_{Acquired Year}_{Acquired Month}_{Acquired Day}
+        points_gdf['pointID'] = split_column[0]
+        points_gdf['date'] = pd.to_datetime(split_column[1] + split_column[2] + split_column[3], format='%Y%m%d')
+        points_gdf['filename'] = csv.split(".")[0]
 
     # append the processed data frame to the list
     processed_dfs.append(points_gdf)
+    pbar.update(1)
+pbar.close()
 
 # concatenate all processed data frames
 combined_df = pd.concat(processed_dfs, ignore_index=True)
 
 # save the result
 combined_df.to_csv(export_csv_name, index=False)
+
+print(f">> Finish arranging all tables in given folder.")
