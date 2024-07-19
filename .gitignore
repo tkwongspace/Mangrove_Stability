@@ -2,3 +2,4 @@
 /data
 *.qgz
 !/.gitignore
+.Rproj.user
