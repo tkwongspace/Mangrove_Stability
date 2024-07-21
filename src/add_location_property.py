@@ -3,24 +3,13 @@ import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
 from tqdm import tqdm
-
-
-def get_satellite_info():
-    ask = input("-- Landsat / MODIS? (L/M): ").strip().upper()
-    if ask == "L":
-        return "Landsat"
-    elif ask == "M":
-        return "MODIS"
-    else:
-        get_satellite_info()
-
+from support_tools import get_files_from_folder, get_satellite_info
 
 # load the table of points
 # points_table = pd.read_csv(r"../data/vi_gee/Landsat/Mean_ndvi_1.csv")
 
 path_to_table = input("-- Please input the folder of point tables: ")
-csv_candidates = [f for f in os.listdir(path_to_table) if f.endswith('.csv') and not f.startswith("._")]
-print(f">> {len(csv_candidates)} CSV files found.")
+csv_candidates = get_files_from_folder(path_to_table)
 
 satellite = get_satellite_info()
 

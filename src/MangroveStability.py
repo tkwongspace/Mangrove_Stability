@@ -3,7 +3,7 @@
 
 import time
 import geopandas as gpd
-from support_tools import *
+from ee_tools import *
 
 # Initialize the Earth Engine module
 ee.Initialize()
