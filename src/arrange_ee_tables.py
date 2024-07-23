@@ -39,8 +39,12 @@ for csv in csv_candidates:
         result_table['vi'] = vi
         result_table['fileID'] = file_id
     else:
-        # MODIS
-        continue
+        # MODIS {system:index{ format -> {Point ID}_{Acquired Date}
+        result_table['pointID'] = split_column[0]
+        result_table['date'] = pd.to_datetime(split_column[1] + split_column[2] + split_column[3], format='%Y%m%d')
+        result_table['vi'] = vi
+        result_table['fileID'] = file_id
+
     # append the processed data frame to the list
     export_table = result_table[['fileID', 'pointID', 'vi', 'lat', 'lon', 'date', 'target']]
     processed_dfs.append(export_table)
