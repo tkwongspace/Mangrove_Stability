@@ -15,6 +15,7 @@ df1 = read.csv("../data/vi_gee/Landsat/non_protected.csv") %>%
          lon = round(lon, 6),
          date = ymd(date),
          state = 'Non-Protected') %>%
+  subset(target >= 0) %>%  # remove rows that disturbed by other LULC
   group_by(fileID, pointID, vi, lat, lon, date, state) %>%
   summarise(values = mean(target)) %>%
   as.data.frame() %>%
@@ -25,6 +26,7 @@ df2 = read.csv("../data/vi_gee/Landsat/protected.csv") %>%
          lon = round(lon, 6),
          date = ymd(date),
          state = 'Protected') %>%
+  subset(target >= 0) %>%  # remove rows that disturbed by other LULC
   group_by(fileID, pointID, vi, lat, lon, date, state) %>%
   summarise(values = mean(target)) %>%
   as.data.frame() %>%
@@ -85,14 +87,14 @@ ggplot(landsat, aes(x = lat, y = values, color = season, fill = season)) +
 
 p1 = ggplot(landsat %>% 
               subset(date >= ym('1999-01') & date < ym('2009-01') & 
-                       vi == 'nirv' & season == 'Summer'),
+                       vi == 'NIRv' & season == 'Summer'),
        aes(x = lat, y = values, color = state, fill = state)) +
   #geom_point(shape = 16, alpha = 0.1) +
   geom_smooth() +
   theme_classic()
 p2 = ggplot(landsat %>% 
               subset(date >= ym('2009-01') & date < ym('2019-01')  & 
-                       vi == 'nirv' & season == 'Summer'),
+                       vi == 'NIRv' & season == 'Summer'),
             aes(x = lat, y = values, color = state, fill = state)) +
   #geom_point(shape = 16, alpha = 0.1) +
   geom_smooth() +
