@@ -4,4 +4,8 @@
 !/.gitignore
 .Rproj.user
 
+# not ready
 /Stability_Analysis_R
+
+# mac OS
+._*
